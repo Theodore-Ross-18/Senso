@@ -1,47 +1,55 @@
 // Senso - The Laser Ruler - HCI - By: Theodore Ross C. Bermejo
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <VL53L0X.h>
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
+// Note: This is the whole code process of the device 
+// and is based on the algorithm process
+// Essential Libraries
+#include <Wire.h> // - The wires
+#include <Adafruit_GFX.h> // - The Graphic
+#include <Adafruit_SSD1306.h> // - The LCD Display (128x64 pixels)
+#include <VL53L0X.h> // - The Laser Module (Adafruit_VL53L0X)
+
+#define SCREEN_WIDTH 128 // Defining the width by 128 pixels
+#define SCREEN_HEIGHT 64 // Defining the height by 64 pixels
+#define OLED_RESET -1 // OLED Reset set to negative 1
+// Class that interacts with the libraries (SSD1306)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define BUTTON_MODE 2
-#define BUTTON_START 3
-#define BUTTON_E 4
-#define BUTTON_C 5
+#define BUTTON_MODE 2 // Defining the Mode Button to Pin 2
+#define BUTTON_START 3 // Defining the Start Button to Pin 3
+#define BUTTON_E 4 // Defining the End Button to Pin 4
+#define BUTTON_C 5 // Defining the Convert Button to Pin 5
 
+// Class = VL53L0X and Variable = sensor
 VL53L0X sensor;
+// Setting the Default Conversion and Data Type
 int mode = 1; // 1 = distance, 2 = dimensions
 int conversion = 1; // 1 = mm, 2 = cm, 3 = m
 bool measuring = false;
 
 void setup() {
-  pinMode(BUTTON_MODE, INPUT_PULLUP);
-  pinMode(BUTTON_START, INPUT_PULLUP);
-  pinMode(BUTTON_E, INPUT_PULLUP);
-  pinMode(BUTTON_C, INPUT_PULLUP);
-
+  pinMode(BUTTON_MODE, INPUT_PULLUP); // Mode Button
+  pinMode(BUTTON_START, INPUT_PULLUP); // Start Button
+  pinMode(BUTTON_E, INPUT_PULLUP); // End Button
+  pinMode(BUTTON_C, INPUT_PULLUP); // Convert Button
+  // Starting Point of LCD Display
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0);
-  display.println("Senso");
-  display.display();
-  delay(2000);
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.println("Welcome");
-  display.display();
-  delay(1000);
-  display.clearDisplay();
+  display.clearDisplay(); // Clearing Text
+  display.setTextSize(1); // Declaring Text Size to 1
+  display.setTextColor(WHITE); // Declaring Text color to White
+  display.setCursor(0, 0); // Positions
+  display.println("Senso"); // Message
+  display.display(); // Displaying Text
+  delay(2000); // This is 2 seconds before clearing text
+  display.clearDisplay(); // Clearing Text
+  display.setCursor(0, 0); // Positions
+  display.println("Welcome"); // Message
+  display.display(); // Displaying Text
+  delay(1000); // This is 1 second before clearing text
+  display.clearDisplay(); // Clearing Text
 }
 
 void loop() {
+  // Process of Checking Whether User Switch Mode of Laser Measuring
   if (digitalRead(BUTTON_START) == LOW) {
     longPress(BUTTON_START, 2000);
     display.clearDisplay();
@@ -52,14 +60,16 @@ void loop() {
     while (digitalRead(BUTTON_MODE) == HIGH) {
       // wait for mode button press
     }
+    // Checking if User Choose Mode 1 or Mode 2
     if (digitalRead(BUTTON_MODE) == LOW) {
       mode = (mode == 1) ? 2 : 1;
       display.clearDisplay();
       display.setCursor(0, 0);
-      if (mode == 1) {
-        display.println("Mode 1. Distance");
+      // This explains if mode is equal 1 then 1 and if not then it proceed to mode 2
+      if (mode == 1) { 
+        display.println("Mode 1. Distance"); // Mode 1. Distance
       } else {
-        display.println("Mode 2. Dimensions");
+        display.println("Mode 2. Dimensions"); // Mode 2. Dimensions
       }
       display.display();
       delay(1000);
@@ -68,6 +78,7 @@ void loop() {
       display.println("Press Start Button");
       display.println("to Begin Measuring");
       display.display();
+      // The process of waiting for the user to press the start button
       while (digitalRead(BUTTON_START) == HIGH) {
         // wait for start button press
       }
@@ -81,7 +92,7 @@ void loop() {
       }
     }
   }
-
+  // Beginning Process of Laser Measuring
   if (digitalRead(BUTTON_E) == LOW && measuring) {
     measuring = false;
     display.clearDisplay();
@@ -91,33 +102,36 @@ void loop() {
     delay(1000);
     display.clearDisplay();
     display.setCursor(0, 0);
+    // The following codes displays the format of processing results 
     if (mode == 1) {
-      display.println("Mode 1. Distance");
-      display.print("Distance: ");
-      display.print(sensor.readRangeContinuousMillimeters());
-      display.println(" mm");
+      // If the user choose mode 1 then this will be the format
+      display.println("Mode 1. Distance"); // Title
+      display.print("Distance: "); // Measure Result for Distance
+      display.print(sensor.readRangeContinuousMillimeters()); // Distance Measure Process
+      display.println(" mm"); // Default Conversion
     } else {
-      display.println("Mode 2. Dimensions");
-      display.print("Height: ");
-      display.print(sensor.readRangeContinuousMillimeters());
-      display.println(" mm");
+      // if the user choose mode 2 then this will be the format
+      display.println("Mode 2. Dimensions"); // Title
+      display.print("Height: "); // Measure Result for Height
+      display.print(sensor.readRangeContinuousMillimeters()); // Height Measure Process
+      display.println(" mm"); // Default Conversion
       delay(1000);
       display.clearDisplay();
       display.setCursor(0, 0);
-      display.println("Width: ");
-      display.print(sensor.readRangeContinuousMillimeters());
-      display.println(" mm");
+      display.println("Width: "); // Title
+      display.print(sensor.readRangeContinuousMillimeters()); // Width Measure Process
+      display.println(" mm"); // Default Conversion
       delay(1000);
       display.clearDisplay();
       display.setCursor(0, 0);
-      display.println("Length: ");
-      display.print(sensor.readRangeContinuousMillimeters());
-      display.println(" mm");
+      display.println("Length: "); // Title
+      display.print(sensor.readRangeContinuousMillimeters()); // Length Measure Process
+      display.println(" mm"); // Default Conversion
     }
-    display.println("Press C Button to Convert");
+    display.println("Press C Button to Convert"); // Allowing the user to convert conversion results
     display.display();
   }
-
+  // Beginning Process of Converting Conversion Current Results
   if (digitalRead(BUTTON_C) == LOW && !measuring) {
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -128,57 +142,69 @@ void loop() {
       display.print(" mm");
       if (conversion == 2) {
         display.print(" (");
+        // Converting Current Result to Centimeter
         display.print(sensor.readRangeContinuousMillimeters() / 10);
         display.print(" cm)");
       } else if (conversion == 3) {
         display.print(" (");
+        // Converting Current Result to Meter
         display.print(sensor.readRangeContinuousMillimeters() / 1000);
         display.print(" m)");
       }
     } else {
+      // 1. Height
       display.println("Mode 2. Dimensions");
       display.print("Height: ");
       display.print(sensor.readRangeContinuousMillimeters());
       if (conversion == 2) {
         display.print(" (");
+        // Converting Current Result to Centimeter
         display.print(sensor.readRangeContinuousMillimeters() / 10);
         display.print(" cm)");
       } else if (conversion == 3) {
         display.print(" (");
+        // Converting Current Result to Meter
         display.print(sensor.readRangeContinuousMillimeters() / 1000);
         display.print(" m)");
       }
+      // 2. Width
       display.println();
       display.print("Width: ");
       display.print(sensor.readRangeContinuousMillimeters());
       if (conversion == 2) {
         display.print(" (");
+        // Converting Current Result to Centimeter
         display.print(sensor.readRangeContinuousMillimeters() / 10);
         display.print(" cm)");
       } else if (conversion == 3) {
         display.print(" (");
+        // Converting Current Result to Meter
         display.print(sensor.readRangeContinuousMillimeters() / 1000);
         display.print(" m)");
       }
+      // 3. Length
       display.println();
       display.print("Length: ");
       display.print(sensor.readRangeContinuousMillimeters());
       if (conversion == 2) {
         display.print(" (");
+        // Converting Current Result to Centimeter
         display.print(sensor.readRangeContinuousMillimeters() / 10);
         display.print(" cm)");
       } else if (conversion == 3) {
         display.print(" (");
+        // Converting Current Result to Meter
         display.print(sensor.readRangeContinuousMillimeters() / 1000);
         display.print(" m)");
       }
     }
     display.println();
-    display.println("Start Button (Repeat)");
-    display.println("E Button (Shut Down)");
+    // Allowing the user to repeat the process of measuring or to end
+    display.println("Long Press Start Button (Repeat)");
+    display.println("Long Press E Button (Shut Down)");
     display.display();
   }
-
+  // If ever user choose E button = end process
   if (digitalRead(BUTTON_E) == LOW && !measuring) {
     longPress(BUTTON_E, 2000);
     display.clearDisplay();
@@ -192,7 +218,7 @@ void loop() {
     powerOff();
   }
 }
-
+// Starting Point of Repeating the Process of Laser Measuring
 void measureDistance() {
   sensor.setTimeout(500);
   sensor.startContinuous();
@@ -231,6 +257,7 @@ void measureDimensions() {
   display.clearDisplay();
 }
 
+// The beginning of Powering On and Off the Device
 void longPress(int button, int duration) {
   unsigned long startTime = millis();
   while (digitalRead(button) == LOW && millis() - startTime < duration) {
