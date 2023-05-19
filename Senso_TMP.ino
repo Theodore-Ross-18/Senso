@@ -1,5 +1,4 @@
-// Senso - The Laser Ruler - Theodoer Ross C. Bermejo 
-
+// Senso - The Laser Ruler - HCI - By: Theodore Ross C. Bermejo
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -268,4 +267,3 @@ void powerOff() {
     // wait for power to turn off
   }
 }
-
