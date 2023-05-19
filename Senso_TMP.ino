@@ -1,357 +1,271 @@
 // Senso - The Laser Ruler - Theodoer Ross C. Bermejo 
 
-// This will include the components used through their library
-#include <Wire.h> // Library for Wires
-#include <Adafruit_VL53L0X.h> // Library for Laser Module
-#include <LiquidCrystal_I2C.h> // Library for LCD screen 
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <VL53L0X.h>
 
-// Pin Definitions - This is where the wires are placed through 
-// pins in the main board for which is the Arduino Uno
-const int START_PIN = 2; // Connected to Start Button
-const int MODE_PIN = 3; // Connected to Mode Button
-const int CONVERT_PIN = 4; // Connected to C or Convert Button
-const int PRINT_PIN = 5; // Will print out the outputs or results
-const int END_PIN = 6; // Will end the operation if satisfied
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// Variables - For Laser Measuring
-bool isDeviceOn = false;
-int mode = 1; // 1 for Mode 1 (Measure Certain Distance), 2 for Mode 2 (Measure Length and Width)
-float distance = 0.0;
-float length = 0.0;
-float width = 0.0;
+#define BUTTON_MODE 2
+#define BUTTON_START 3
+#define BUTTON_E 4
+#define BUTTON_C 5
 
-Adafruit_VL53L0X vl53l0x = Adafruit_VL53L0X(); // The Laser Module
-LiquidCrystal_I2C lcd(0x27, 16, 2); // The LCD Screen
-
-// Function declarations
-void measureCertainDistance();
-void measureLengthAndWidth();
-float measureDistance();
-void printMeasurement();
-void convertMeasurement();
-void endMeasurement();
-void turnOnDevice();
-
-bool startButtonPressed() {
-  return digitalRead(2 == LOW);
-}
-
-bool modeButtonPressed() {
-  return digitalRead(3 == LOW);
-}
-
-bool convertButtonPressed() {
-  return digitalRead(4 == LOW);
-}
-
-bool printButtonPressed() {
-  return digitalRead(5 == LOW);
-}
-
-bool endButtonPressed() {
-  return digitalRead(6) == LOW;
-}
-
-bool endButtonLongPressed() {
-  // Set the duration threshold for a long press (in milliseconds)
-  const unsigned long longPressDuration = 2000; //
-
-  // Get the current time
-  unsigned long currentMillis = millis();
-
-  // Wait for the end button to be released
-  while (digitalRead(6) == LOW)
-      delay(10);
-
-  // Calculate the duration of the button press
-  unsigned long buttonPressDuration = millis() - currentMillis;
-
-  // Check if the button press duration exceeds the long press threshold
-  return buttonPressDuration >= longPressDuration;
-
-}
-
-int waitForButtonPress();
+VL53L0X sensor;
+int mode = 1; // 1 = distance, 2 = dimensions
+int conversion = 1; // 1 = mm, 2 = cm, 3 = m
+bool measuring = false;
 
 void setup() {
-  // Initialize the LCD
-  lcd.begin(16, 2);
-  lcd.print("Senso Device");
-  
-  // Initialize the VL53L0X sensor
-  Wire.begin();
-  vl53l0x.begin();
-  
-  // Set up button pins
-  pinMode(START_PIN, INPUT_PULLUP);
-  pinMode(MODE_PIN, INPUT_PULLUP);
-  pinMode(CONVERT_PIN, INPUT_PULLUP);
-  pinMode(PRINT_PIN, INPUT_PULLUP);
-  pinMode(END_PIN, INPUT_PULLUP);
+  pinMode(BUTTON_MODE, INPUT_PULLUP);
+  pinMode(BUTTON_START, INPUT_PULLUP);
+  pinMode(BUTTON_E, INPUT_PULLUP);
+  pinMode(BUTTON_C, INPUT_PULLUP);
+
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.println("Senso");
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Welcome");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
 }
 
 void loop() {
-  // Check if the device is on
-  if (!isDeviceOn && startButtonPressed()) {
-    turnOnDevice();
-  }
-   
-   while (isDeviceOn) {
-     if (modeButtonPressed()) {
-       mode = (mode + 1) % 2; // Toggle between Mode 1 and Mode 2
-       lcd.clear();
-       lcd.print("Mode ");
-       lcd.print(mode + 1);
-       delay(200); // Button debounce delay
-     }
-
+  if (digitalRead(BUTTON_START) == LOW) {
+    longPress(BUTTON_START, 2000);
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Press Mode Button");
+    display.println("to Switch Mode");
+    display.display();
+    while (digitalRead(BUTTON_MODE) == HIGH) {
+      // wait for mode button press
+    }
+    if (digitalRead(BUTTON_MODE) == LOW) {
+      mode = (mode == 1) ? 2 : 1;
+      display.clearDisplay();
+      display.setCursor(0, 0);
       if (mode == 1) {
-        if (startButtonPressed()) {
-          measureLengthAndWidth();
-        }
-      } else if (mode == 2) {
-        if (startButtonPressed()) {
-          measureLengthAndWidth();
+        display.println("Mode 1. Distance");
+      } else {
+        display.println("Mode 2. Dimensions");
+      }
+      display.display();
+      delay(1000);
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("Press Start Button");
+      display.println("to Begin Measuring");
+      display.display();
+      while (digitalRead(BUTTON_START) == HIGH) {
+        // wait for start button press
+      }
+      if (digitalRead(BUTTON_START) == LOW) {
+        measuring = true;
+        if (mode == 1) {
+          measureDistance();
+        } else {
+          measureDimensions();
         }
       }
-
-    if (printButtonPressed()) {
-      printMeasurement();
     }
+  }
 
-    if (convertButtonPressed()) {
-      convertMeasurement();
+  if (digitalRead(BUTTON_E) == LOW && measuring) {
+    measuring = false;
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Done");
+    display.display();
+    delay(1000);
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    if (mode == 1) {
+      display.println("Mode 1. Distance");
+      display.print("Distance: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      display.println(" mm");
+    } else {
+      display.println("Mode 2. Dimensions");
+      display.print("Height: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      display.println(" mm");
+      delay(1000);
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("Width: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      display.println(" mm");
+      delay(1000);
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println("Length: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      display.println(" mm");
     }
+    display.println("Press C Button to Convert");
+    display.display();
+  }
 
-    if (endButtonPressed()) {
-      if (endButtonLongPressed()) {
-        endMeasurement();
+  if (digitalRead(BUTTON_C) == LOW && !measuring) {
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    if (mode == 1) {
+      display.println("Mode 1. Distance");
+      display.print("Distance: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      display.print(" mm");
+      if (conversion == 2) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 10);
+        display.print(" cm)");
+      } else if (conversion == 3) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 1000);
+        display.print(" m)");
+      }
+    } else {
+      display.println("Mode 2. Dimensions");
+      display.print("Height: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      if (conversion == 2) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 10);
+        display.print(" cm)");
+      } else if (conversion == 3) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 1000);
+        display.print(" m)");
+      }
+      display.println();
+      display.print("Width: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      if (conversion == 2) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 10);
+        display.print(" cm)");
+      } else if (conversion == 3) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 1000);
+        display.print(" m)");
+      }
+      display.println();
+      display.print("Length: ");
+      display.print(sensor.readRangeContinuousMillimeters());
+      if (conversion == 2) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 10);
+        display.print(" cm)");
+      } else if (conversion == 3) {
+        display.print(" (");
+        display.print(sensor.readRangeContinuousMillimeters() / 1000);
+        display.print(" m)");
       }
     }
-
-   }
-}
-
-void measureCertainDistance() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Mode 1: Measure");
-  lcd.setCursor(0, 1);
-  lcd.print("Certain Distance");
-  
-  // Measure the distance
-  lcd.clear();
-  lcd.setCursor(0, 0);
-
-  lcd.print("Measuring...");
-  float distance = measureDistance();
-  lcd.setCursor(0, 1);
-  lcd.print("Distance: ");
-  lcd.print(distance);
-  lcd.print(" cm");
-  
-  delay(1000); // Delay for measurement display
-}
-
-void measureLengthAndWidth() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Mode 2: Measure");
-  lcd.setCursor(0, 1);
-  lcd.print("Length and Width");
-  
-  // Measure the length
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Measuring...");
-  lcd.setCursor(0, 1);
-  lcd.print("Length: ");
-  length = measureDistance();
-  lcd.print(length);
-  lcd.print(" cm");
-  
-  // Wait for the user to reposition the sensor
-  while (startButtonPressed()) {
-    lcd.setCursor(0, 1);
-    lcd.print("Reposition...");
-    delay(100);
+    display.println();
+    display.println("Start Button (Repeat)");
+    display.println("E Button (Shut Down)");
+    display.display();
   }
-  
-  // Measure the width
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Measuring...");
-  lcd.setCursor(0, 1);
-  lcd.print("Width: ");
-  width = measureDistance();
-  lcd.print(width);
-  lcd.print(" cm");
-  
-  delay(1000); // Delay for measurement display
-}
 
-float measureDistance() {
-  VL53L0X_RangingMeasurementData_t measure;
-  
-  vl53l0x.rangingTest(&measure, false); // Set second parameter to 'true' for more accurate measurements
-  
-  if (measure.RangeStatus != 4) {
-    return measure.RangeMilliMeter / 10.0; // Convert millimeters to centimeters
-  } else {
-    return -1.0; // Invalid measurement
+  if (digitalRead(BUTTON_E) == LOW && !measuring) {
+    longPress(BUTTON_E, 2000);
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Shutting Down");
+    display.display();
+    delay(2000);
+    display.clearDisplay();
+    display.display();
+    delay(1000);
+    powerOff();
   }
 }
 
-void printMeasurement() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Printing...");
-  
-  // Print the measurement
-  lcd.setCursor(0, 1);
-  if (mode == 0) {
-    lcd.print("Distance: ");
-    lcd.print(distance);
-    lcd.print(" cm");
-  } else if (mode == 1) {
-    lcd.print("Length: ");
-    lcd.print(length);
-    lcd.print(" cm");
-    lcd.setCursor(0, 2);
-    lcd.print("Width: ");
-    lcd.print(width);
-    lcd.print(" cm");
-  }
-  
-  delay(2000); // Delay for printing display
+void measureDistance() {
+  sensor.setTimeout(500);
+  sensor.startContinuous();
 }
 
-  // Perform the conversion logic
-  void convertMeasurement() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Converting...");
-  
-  // Convert the measurement
-  lcd.setCursor(0, 1);
-  if (mode == 0) {
-    lcd.print("Convert: Distance");
-    lcd.setCursor(0, 2);
-    lcd.print("1. Meter   2. Millimeter");
-    int conversionOption = waitForButtonPress();
-    
-    float convertedDistance;
-    
-    switch (conversionOption) {
-      case 1: // Convert to meter
-        convertedDistance = distance / 100.0;
-        lcd.clear();
-        lcd.print("Converted: ");
-        lcd.print(convertedDistance);
-        lcd.print(" m");
-        break;
-      case 2: // Convert to millimeter
-        convertedDistance = distance * 10.0;
-        lcd.clear();
-        lcd.print("Converted: ");
-        lcd.print(convertedDistance);
-        lcd.print(" mm");
-        break;
-      default:
-        lcd.clear();
-        lcd.print("Invalid Option");
-        break;
-    }
-  } else if (mode == 1) {
-    lcd.print("Convert: Length");
-    lcd.setCursor(0, 2);
-    lcd.print("1. Meter   2. Millimeter");
-    int conversionOption = waitForButtonPress();
-    
-    float convertedLength;
-    float convertedWidth;
-    
-    switch (conversionOption) {
-      case 1: // Convert to meter
-        convertedLength = length / 100.0;
-        convertedWidth = width / 100.0;
-        lcd.clear();
-        lcd.print("Converted Length: ");
-        lcd.print(convertedLength);
-        lcd.print(" m");
-        lcd.setCursor(0, 3);
-        lcd.print("Converted Width: ");
-        lcd.print(convertedWidth);
-        lcd.print(" m");
-        break;
-      case 2: // Convert to millimeter
-        convertedLength = length * 10.0;
-        convertedWidth = width * 10.0;
-        lcd.clear();
-        lcd.print("Converted Length: ");
-        lcd.print(convertedLength);
-        lcd.print(" mm");
-        lcd.setCursor(0, 3);
-        lcd.print("Converted Width: ");
-        lcd.print(convertedWidth);
-        lcd.print(" mm");
-        break;
-      default:
-        lcd.clear();
-        lcd.print("Invalid Option");
-        break;
+void measureDimensions() {
+  sensor.setTimeout(500);
+  sensor.startContinuous();
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Height: ");
+  display.display();
+  delay(1000);
+  sensor.readRangeContinuousMillimeters();
+  display.print(sensor.readRangeContinuousMillimeters());
+  display.println(" mm");
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Width: ");
+  display.display();
+  delay(1000);
+  sensor.readRangeContinuousMillimeters();
+  display.print(sensor.readRangeContinuousMillimeters());
+  display.println(" mm");
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Length: ");
+  display.display();
+  delay(1000);
+  sensor.readRangeContinuousMillimeters();
+  display.print(sensor.readRangeContinuousMillimeters());
+  display.println(" mm");
+  delay(1000);
+  display.clearDisplay();
+}
+
+void longPress(int button, int duration) {
+  unsigned long startTime = millis();
+  while (digitalRead(button) == LOW && millis() - startTime < duration) {
+    // wait for button release or timeout
+  }
+  if (millis() - startTime >= duration) {
+    if (button == BUTTON_START) {
+      powerOn();
+    } else if (button == BUTTON_E) {
+      powerOff();
     }
   }
-  
-  delay(2000); // Delay for conversion display
 }
 
-int waitForButtonPress() {
+void powerOn() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Powering On");
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+}
+
+void powerOff() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Powering Off");
+  display.display();
+  delay(2000);
+  display.clearDisplay();
+  display.display();
+  delay(1000);
   while (true) {
-    if (digitalRead(CONVERT_PIN) == LOW) {
-      delay(10); // Button debounce delay
-      if (digitalRead(CONVERT_PIN) == LOW) {
-        // Wait for button release
-        while (digitalRead(CONVERT_PIN) == LOW) {
-          delay(10);
-        }
-        // Return the selected option
-        return 1;
-      }
-    }
-    if (digitalRead(PRINT_PIN) == LOW) {
-      delay(10); // Button debounce delay
-      if (digitalRead(PRINT_PIN) == LOW) {
-        // Wait for button release
-        while (digitalRead(PRINT_PIN) == LOW) {
-          delay(10);
-        }
-        // Return the selected option
-        return 2;
-      }
-    }
+    // wait for power to turn off
   }
-  delay(2000); // Delay for conversion display
-}
-  
-void endMeasurement() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Turning off...");
-  delay(1000);
-  isDeviceOn = false;
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Device Off");
 }
 
-void turnOnDevice() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Turning on...");
-  delay(1000);
-  isDeviceOn = true;
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Device On");
-}
