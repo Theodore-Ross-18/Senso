@@ -15,9 +15,9 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define BUTTON_MODE 2 // Defining the Mode Button to Pin 2
-#define BUTTON_START 3 // Defining the Start Button to Pin 3
-#define BUTTON_E 4 // Defining the End Button to Pin 4
-#define BUTTON_C 5 // Defining the Convert Button to Pin 5
+#define BUTTON_ONSTART 3 // Defining the On/Start Button to Pin 3
+#define BUTTON_OFFPRINT 4 // Defining the Off/Print Button to Pin 4
+#define BUTTON_CONVERT 5 // Defining the Convert Button to Pin 5
 
 // Class = VL53L0X and Variable = sensor
 VL53L0X sensor;
@@ -25,12 +25,21 @@ VL53L0X sensor;
 int mode = 1; // 1 = distance, 2 = dimensions
 int conversion = 1; // 1 = mm, 2 = cm, 3 = m
 bool measuring = false;
+int distance = 0;
 
 void setup() {
   pinMode(BUTTON_MODE, INPUT_PULLUP); // Mode Button
-  pinMode(BUTTON_START, INPUT_PULLUP); // Start Button
-  pinMode(BUTTON_E, INPUT_PULLUP); // End Button
-  pinMode(BUTTON_C, INPUT_PULLUP); // Convert Button
+  pinMode(BUTTON_ONSTART, INPUT_PULLUP); // On/Start Button
+  pinMode(BUTTON_OFFPRINT, INPUT_PULLUP); // Off/Print Button
+  pinMode(BUTTON_CONVERT, INPUT_PULLUP); // Convert Button
+
+  // initialize sensor (VL53L0X)
+  sensor.init();
+  // set measurement timing budget to 200ms
+  sensor.setMeasurementTimingBudget(200000);
+  // start continous readings
+  sensor.startContinuous();
+
   // Starting Point of LCD Display
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay(); // Clearing Text
@@ -50,8 +59,8 @@ void setup() {
 
 void loop() {
   // Process of Checking Whether User Switch Mode of Laser Measuring
-  if (digitalRead(BUTTON_START) == LOW) {
-    longPress(BUTTON_START, 2000);
+  if (digitalRead(BUTTON_ONSTART) == LOW) {
+    longPress(BUTTON_ONSTART, 2000);
     display.clearDisplay();
     display.setCursor(0, 0);
     display.println("Press Mode Button");
@@ -79,10 +88,10 @@ void loop() {
       display.println("to Begin Measuring");
       display.display();
       // The process of waiting for the user to press the start button
-      while (digitalRead(BUTTON_START) == HIGH) {
+      while (digitalRead(BUTTON_ONSTART) == HIGH) {
         // wait for start button press
       }
-      if (digitalRead(BUTTON_START) == LOW) {
+      if (digitalRead(BUTTON_ONSTART) == LOW) {
         measuring = true;
         if (mode == 1) {
           measureDistance();
@@ -93,7 +102,7 @@ void loop() {
     }
   }
   // Beginning Process of Laser Measuring
-  if (digitalRead(BUTTON_E) == LOW && measuring) {
+  if (digitalRead(BUTTON_OFFPRINT) == LOW && measuring) {
     measuring = false;
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -132,7 +141,7 @@ void loop() {
     display.display();
   }
   // Beginning Process of Converting Conversion Current Results
-  if (digitalRead(BUTTON_C) == LOW && !measuring) {
+  if (digitalRead(BUTTON_CONVERT) == LOW && !measuring) {
     display.clearDisplay();
     display.setCursor(0, 0);
     if (mode == 1) {
@@ -205,8 +214,8 @@ void loop() {
     display.display();
   }
   // If ever user choose E button = end process
-  if (digitalRead(BUTTON_E) == LOW && !measuring) {
-    longPress(BUTTON_E, 2000);
+  if (digitalRead(BUTTON_OFFPRINT) == LOW && !measuring) {
+    longPress(BUTTON_OFFPRINT, 2000);
     display.clearDisplay();
     display.setCursor(0, 0);
     display.println("Shutting Down");
@@ -264,9 +273,9 @@ void longPress(int button, int duration) {
     // wait for button release or timeout
   }
   if (millis() - startTime >= duration) {
-    if (button == BUTTON_START) {
+    if (button == BUTTON_ONSTART) {
       powerOn();
-    } else if (button == BUTTON_E) {
+    } else if (button == BUTTON_OFFPRINT) {
       powerOff();
     }
   }
