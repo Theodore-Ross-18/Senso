@@ -42,3 +42,7 @@ USB Cable A to B - 6 Foot (Optional)
 
 ![alt text](<Senso (Final Functional Model).png>)
 
+# Senso: Flowchart Process
+
+![alt text](<Senso - The Laser Ruler (Flowchart Process).png>)
+
