@@ -1,3 +1,6 @@
 # ***Senso***
 
-> A Source code for the device named Senso - The Laser Ruler an Arduino project paper proposal for Human Computer Interaction (HCI)
+> - Laser Ruler an Arduino Project Theoretical Paper Proposal for Human Computer Interaction (HCI) Subject. (2023)
+
+
+![Senso](Senso.png)
