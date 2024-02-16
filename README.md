@@ -7,34 +7,29 @@
 
 ## ***Materials***
 
-![alt text](<1. Arduino Uno Board.png>)
-
 Arduino Uno (Board)
-
-![alt text](<2. Laser Module.png>)
+![alt text](<1. Arduino Uno Board.png>)
 
 Adafruit VL53L0X Time of Flight 
 Distance Sensor
-
-![alt text](<3. LCD Display.png>)
+![alt text](<2. Laser Module.png>)
 
 LCD 16x2
-
-![alt text](<4. Push Button.png>)
+![alt text](<3. LCD Display.png>)
 
 Mini Pushbutton Switch
-
-![alt text](<5. Breadboard.png>)
+![alt text](<4. Push Button.png>)
 
 Breadboard
+![alt text](<5. Breadboard.png>)
 
-![alt text](<6. Battery.png>)
 
 9V Alkaline Battery
-
-![alt text](<7. USB Cable.png>)
+![alt text](<6. Battery.png>)
 
 USB Cable A to B - 6 Foot (Optional)
+![alt text](<7. USB Cable.png>)
+
 
 # Senso: Final Functional Model
 
