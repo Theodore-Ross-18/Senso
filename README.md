@@ -1,7 +1,6 @@
 # ***Senso***
 
-> - Laser Ruler an Arduino Project Theoretical Paper Proposal for Human Computer Interaction (HCI) Subject. (2023)
-
+> - HCI Theoretical Paper Proposal: Senso - Laser Ruler an Arduino Project (2023)
 
 ![Senso](Senso.png)
 
